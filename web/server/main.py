@@ -110,9 +110,12 @@ def post_user(user:User) -> dict:
 
 # get route: return a static HTML page
 @app.get("/login", response_class=HTMLResponse)
-def get_login(request:Request) -> HTMLResponse:
-    with open(BASE_DIR /"views/login.html") as html:
-        return HTMLResponse(content=html.read())
+def get_login(request: Request) -> HTMLResponse:
+    return views.TemplateResponse(
+      request,
+      "login.html",
+      context = {"request": request}
+    )
     
 @app.post('/login')
 def post_login(visitor:Visitor, request:Request, response:Response) -> dict:
@@ -144,10 +147,11 @@ def post_logout(request:Request, response:Response) -> dict:
 def get_dashboard(request:Request) -> HTMLResponse:
     session = sessions.get_session(request)
     if len(session) > 0 and session.get('logged_in'):
-      with open(BASE_DIR /"views/dashboard.html") as html:
-        return HTMLResponse(content=html.read())
-
-      #return views.TemplateResponse('dashboard.html')
+      return views.TemplateResponse(
+        request,
+        "dashboard.html",
+        context = {"request": request}
+      )
     else:
       return RedirectResponse(url="/login", status_code=302)
 
@@ -161,8 +165,11 @@ def get_sessions(request:Request) -> dict:
 # GET /
 @app.get('/', response_class=HTMLResponse)
 def get_home(request:Request) -> HTMLResponse:
-    with open(BASE_DIR /"views/homepage.html") as html:
-        return HTMLResponse(content=html.read())
+    return views.TemplateResponse(
+       request,
+       "homepage.html",
+       context = {"request": request}
+    )
 
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
