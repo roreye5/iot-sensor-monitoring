@@ -1,0 +1,70 @@
+
+
+  body {
+    background-color: black;
+    color: lime;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+.topnav {
+    background-color: #000;
+    padding: 20px;
+    text-align: center;
+}
+
+.topnav h1 {
+    color: lime;
+    font-size: 25px;
+    margin: 0;
+}
+
+.topnav a {
+    color: lime;
+    text-decoration: none;
+    margin: 0 10px;
+}
+
+.topnav a.active {
+    color: yellow;
+}
+
+
+
+.topnav a:hover {
+    border-bottom: 2px solid #ff5733; /* Or any other color */
+    transition: border-bottom 0.3s ease-in-out;
+}
+
+
+.logout_button {
+    color: lime;
+    cursor: pointer;
+    display: inline-block;
+    margin-left: 20px;
+    transition: transform 0.3s ease-in-out;
+}
+
+.logout_button:hover {
+    font-weight: bold;
+    transform: scale(1.2);
+}
+
+button {
+    background-color: #00FF00;
+    color: black;
+    border: none;
+    padding: 10px 20px;
+    margin: 10px;
+    cursor: pointer;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
+}
+
+button:hover {
+    background-color: #00CC00;
+}
+
+p {
+    font-size: 18px;
+    margin-top: 20px;
+}

@@ -1,0 +1,10 @@
+*.env
+!*.env.example
+
+venv/
+__pycache__/
+*.pyc
+
+.DS_Store
+
+mysql-db/

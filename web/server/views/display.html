@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Assistant</title>
+    <link rel="stylesheet" type="text/css" href="/public/display.css">
+</head>
+<body>
+    
+    <div class="topnav">
+        <h1>AI Voice Assistant</h1>
+        <a href="/dashboard">Dashboard</a>
+        <a class="active" href="/record">AI Voice Assistant</a>
+        <div class='logout_button'> Logout </div>
+    </div>
+
+
+<!-- Buttons for starting and stopping the recording -->
+<button id="start-recording">Start Recording</button>
+<button id="stop-recording" disabled>Stop Recording</button>
+
+<!-- Audio element for playback, initially hidden -->
+<audio id="audio-playback" controls hidden></audio>
+
+<p id="transcript-box"></p>
+
+<p id="forecast-box"></p>
+
+<p id="suggestion-box"></p>
+
+<script>
+    document.querySelector('.logout_button').addEventListener('click', (event) => {
+        const confirmLogout = confirm("Are you sure you want to logout?");
+        if (confirmLogout) {
+            server_request('/logout', {}, 'POST', (response) => {
+                if (response.session_id == 0) {
+                    location.replace('/login');
+                }
+            });
+        }
+
+    });
+  // Selecting page elements to interact with
+  const startRecordingButton = document.getElementById('start-recording');
+  const stopRecordingButton = document.getElementById('stop-recording');
+  const audioPlayback = document.getElementById('audio-playback');
+  const transcriptBox = document.getElementById('transcript-box');
+  const forecastBox = document.getElementById('forecast-box');
+  const suggestionBox = document.getElementById('suggestion-box');
+
+  // Will be assigned a MediaRecorder instance when recording starts
+  let mediaRecorder = null;
+
+  // Array to store chunks of audio data
+  let audioChunks = [];
+
+  // Function to initialize the MediaRecorder and start recording
+  function startRecording(stream) {
+    mediaRecorder = new MediaRecorder(stream);
+
+    mediaRecorder.ondataavailable = event => {
+      // Called whenever there is audio data available during recording
+      audioChunks.push(event.data);
+    };
+
+    mediaRecorder.onstop = async () => {
+      // Called when the recording is stopped
+      const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+      const audioUrl = URL.createObjectURL(audioBlob);
+      audioPlayback.src = audioUrl;
+      audioPlayback.hidden = false; // Reveal the audio playback element
+      audioChunks = []; // Clear the recorded chunks
+      
+      // Prepare the audio blob for upload
+      const formData = new FormData();
+      formData.append('file', audioBlob, 'recording.wav');
+      formData.append('auth', 'A17582613'); // Replace with your actual UCSD PID
+      
+      // Upload the audio blob to the transcription API
+      try {
+        const response = await fetch('https://ece140.frosty-sky-f43d.workers.dev/api/transcribe', {
+          method: 'POST',
+          body: formData
+        });
+        const result = await response.json();
+        
+        if (response.ok) {
+        //   console.log(result['transcription']);
+          var question = result['transcription'];
+          transcriptBox.innerHTML = "Question: " + question;
+          var recentData = await querySensordata();
+        //   console.log(recentData);
+          var inferenseResponse = await queryInference(recentData, question);
+          forecastBox.innerHTML = "Forecast: " + inferenseResponse['forecast'];
+          suggestionBox.innerHTML = "Suggestion: " + inferenseResponse['suggestion'];
+          var speakText = inferenseResponse['forecast'] + " " + inferenseResponse['suggestion'];
+          await querySynthesis(speakText);
+          
+        } else {
+          console.error('Transcription error:', result);
+        }
+      } catch (error) {
+        // console.error('Network error:', error.message);
+      }
+    };
+
+    // Start recording audio
+    mediaRecorder.start();
+    // Update button states
+    startRecordingButton.disabled = true;
+    stopRecordingButton.disabled = false;
+  }
+
+  // Error handler for getUserMedia
+  function handleError(error) {
+    // console.error('Error accessing the microphone:', error);
+  }
+
+  // Query Sensor Data for most recent data
+  async function querySensordata() {
+    var returnData = null;
+    await fetch(`https://ece140.frosty-sky-f43d.workers.dev/api/query?auth=A16359906`)
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error(`HTTP Error: ${response.status}`);
+            }
+            return response.json();
+            })
+        .then((data) => {
+            // Get most recent temperature
+            var temperaturedata = data['results'].filter(function(dataPoint) {
+                return dataPoint.sensorType == "temperature";
+            });
+
+            // console.log(temperaturedata[temperaturedata.length - 1].value);
+
+            // Get most recent humidity
+                        var humiditydata = data['results'].filter(function(dataPoint) {
+                return dataPoint.sensorType == "humidity";
+            });
+
+            // console.log(humiditydata[humiditydata.length - 1].value);
+
+            // Get most recent light
+                        var lightdata = data['results'].filter(function(dataPoint) {
+                return dataPoint.sensorType == "light";
+            });
+
+            // console.log(lightdata[lightdata.length - 1].value);
+
+            // Get most recent pressure
+                        var pressuredata = data['results'].filter(function(dataPoint) {
+                return dataPoint.sensorType == "pressure";
+            });
+
+            // console.log(pressuredata[pressuredata.length - 1].value);
+
+            let sensorData = {
+                temperature: temperaturedata[temperaturedata.length - 1].value,
+                humidity: humiditydata[humiditydata.length - 1].value,
+                light: lightdata[lightdata.length - 1].value,
+                pressure: pressuredata[pressuredata.length - 1].value
+            };
+
+            // console.log(sensorData);
+
+            returnData = sensorData;
+        })
+        .catch((error) => {
+            console.error(error);
+            alert('Sensor Query Error');
+        });
+        return returnData;
+  }
+
+  // Query inference API
+  async function queryInference(recentData, question) {
+    var returnData = null;
+    await fetch('https://ece140.frosty-sky-f43d.workers.dev/api/inference', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            auth: 'A16359906',
+            sensorData: recentData,
+            question: question
+        })
+    })
+    .then((response) => {
+        if (!response.ok) {
+            throw new Error(`HTTP Error: ${response.status}`);
+        }
+        return response.json();
+        })
+    .then((data) => {
+        // console.log(data);
+        returnData = data
+    })
+    .catch((error) => {
+        console.error(error);
+        alert('Inference Error');
+    });
+    return returnData;
+  }
+
+  // Query speech synthesis
+    async function querySynthesis(speakText) {
+        if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(speakText);
+            window.speechSynthesis.speak(utterance);
+        } else {
+            console.error('SpeechSynthesis API is not supported in this browser.');
+        }
+  }
+  
+  // Event listener for the start recording button
+  startRecordingButton.onclick = () => {
+    // Request access to the user's microphone
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(startRecording) // If access is granted, start recording
+      .catch(handleError); // If access is denied, log the error
+  };
+
+  // Event listener for the stop recording button
+  stopRecordingButton.onclick = () => {
+    // Stop the recording
+    mediaRecorder.stop();
+    // Update button states
+    startRecordingButton.disabled = false;
+    stopRecordingButton.disabled = true;
+  };
+</script>
+
+</body>
+</html>
+

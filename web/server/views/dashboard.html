@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@^3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@^2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@^1"></script>
+    <link rel="stylesheet" type="text/css" href="/public/dashboard.css">
+    <script src="public/dashboard.js" defer></script>
+</head>
+<body>
+    <div class="toptop">
+        <h2>Data Dashboard</h2>
+    </div>
+    
+
+    <div class="topnav">
+        <a class="active" href="/dashboard">Dashboard</a>
+        <a href="/record">AI Voice Assistant</a>
+        <div class='logout_button'> Logout </div>
+    </div>
+
+    <form id="data-form">
+        <label for="location">Location:</label>
+        <select id="location" name="location">
+            <option value="Jacobs Hall">Jacobs Hall</option>
+            <option value="Pepper Canyon Hall">Pepper Canyon Hall</option>
+            <option value="RIMAC">RIMAC</option>
+            <option value="Franklin Antonio Hall">Franklin Antonio Hall</option>
+            <option value="Warren Lecture Hall">Warren Lecture Hall</option>
+        </select>
+        <label for="sensor-type">Sensor Type:</label>
+        <select id="sensor-type" name="sensor-type">
+            <option value="light">Light</option>
+            <option value="temperature">Temperature</option>
+            <option value="humidity">Humidity</option>
+            <option value="pressure">Pressure</option>
+        </select>
+        <label for="start-time">Start Time:</label>
+        <input type="datetime-local" id="start-time" name="start-time">
+        <label for="end-time">End Time:</label>
+        <input type="datetime-local" id="end-time" name="end-time">
+        <button type="submit">View Graph</button>
+    </form>
+
+
+
+
+    <div id="chart-container">
+        <h3>Chart</h3>
+        <canvas id="myChart" width="400" height="400"></canvas>
+    </div>
+</body>
+</html>
