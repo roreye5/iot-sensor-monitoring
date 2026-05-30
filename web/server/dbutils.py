@@ -66,3 +66,19 @@ def check_user_password(username:str, password:str) -> bool:
   if result is not None:
     return bcrypt.checkpw(password.encode('utf-8'), result[0].encode('utf-8'))
   return False
+
+
+def get_user_by_username(username: str) -> dict | None:
+    query = "SELECT first_name, last_name, username FROM users WHERE username = %s"
+
+    connection = mysql.connect(**db_config)
+    cursor = connection.cursor(dictionary=True)
+
+    cursor.execute(query, (username,))
+    user = cursor.fetchone()
+
+    cursor.close()
+    connection.close()
+
+    return user
+

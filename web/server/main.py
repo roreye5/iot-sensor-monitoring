@@ -39,8 +39,11 @@ class Visitor(BaseModel):
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 # A function to authenticate users when trying to login or use protected routes
-def authenticate_user(username:str, password:str) -> bool:
-  return db.check_user_password(username, password)
+# returns the user data
+def authenticate_user(username:str, password:str) -> bool | dict | None:
+  if db.check_user_password(username, password):
+     return db.get_user_by_username(username) 
+  return False
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 TEMP_DIRECTORY = "temp"
@@ -128,8 +131,9 @@ def post_login(visitor:Visitor, request:Request, response:Response) -> dict:
     sessions.end_session(request, response)
 
   # Authenticate the user
-  if authenticate_user(username, password):
-    session_data = {'username': username, 'logged_in': True}
+  user = authenticate_user(username, password)
+  if user:
+    session_data = {'username': username, "first_name": user["first_name"], 'logged_in': True}
     session_id = sessions.create_session(response, session_data)
     return {'message': 'Login successful', 'session_id': session_id}
   else:
@@ -145,12 +149,13 @@ def post_logout(request:Request, response:Response) -> dict:
 # or redirect to login page if not logged in
 @app.get("/dashboard", response_class=HTMLResponse)
 def get_dashboard(request:Request) -> HTMLResponse:
+    
     session = sessions.get_session(request)
     if len(session) > 0 and session.get('logged_in'):
       return views.TemplateResponse(
         request,
         "dashboard.html",
-        context = {"request": request}
+        context = {"request": request, "username": str(session.get('first_name')).capitalize()}
       )
     else:
       return RedirectResponse(url="/login", status_code=302)
