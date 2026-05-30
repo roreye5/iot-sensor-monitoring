@@ -1,53 +1,3 @@
-
-/* .logout_button {
-    background-color: #dc3545;
-    color: #fff;
-    padding: 8px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    text-transform: uppercase;
-    font-weight: bold;
-    display: inline-block;
-} */
-/* .logout_button {
-    float: right;
-    padding: 14px 16px;
-    color: #ffffff;
-    text-decoration: none;
-    transition: background-color 0.3s;
-    font-weight: bold;
-  }
-  
-  .logout_button:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: white;
-  }
-
-.topnav {
-    overflow: hidden;
-    background-color: #444;
-  }
-  
-  .topnav a {
-    float: left;
-    color: #f2f2f2;
-    text-align: center;
-    padding: 14px 16px;
-    text-decoration: none;
-    font-size: 17px;
-  }
-  
-  .topnav a:hover {
-    background-color: #ddd;
-    color: rgb(47, 48, 52);
-  }
-  
-  .topnav a.active {
-    background-color: #0362c1;
-    color: white;
-  }
-   */
-
    .toptop {
     background-color: #11598e;
     color: white;
@@ -135,6 +85,23 @@ form {
 form label {
     display: block;
     margin-bottom: 5px;
+}
+
+.welcome-banner {
+    display: inline-block;
+    margin: 20px auto 24px;
+    padding: 14px 20px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid #11598e;
+    border-radius: 16px;
+    color: #003249;
+    font-size: 1.25rem;
+    font-weight: 700;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+}
+
+.welcome-banner span {
+    color: #11598e;
 }
 
 form select,
