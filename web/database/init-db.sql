@@ -16,3 +16,14 @@ create table if not exists sessions (
   session_data json not null,
   created_at timestamp not null default current_timestamp
 );
+
+
+
+create table if not exists sensor_data (
+  id integer auto_increment primary key,
+  user_id integer not null,
+  location varchar(255) not null,
+  created_at timestamp not null default current_timestamp,
+  temperature float not null,
+  humidity float not null
+);

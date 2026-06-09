@@ -2,12 +2,15 @@
 # Necessary Imports
 import mysql.connector as mysql                   # Used for interacting with the MySQL database
 import os                                         # Used for interacting with the system environment
+from pathlib import Path                             # Used for handling file paths
 from dotenv import load_dotenv                    # Used to read the credentials
+from datetime import datetime
 import bcrypt
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 # Configuration
-load_dotenv('../credentials.env')                 # Read in the environment variables for MySQL
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR.parent / 'credentials.env')  # Read in the environment variables for MySQL
 db_config = {
   "host": os.environ['MYSQL_HOST'],
   "user": os.environ['MYSQL_USER'],
@@ -52,7 +55,6 @@ def select_users(user_id:int=None) -> list:
 
 
 
-
 # SELECT query to verify hashed password of users
 def check_user_password(username:str, password:str) -> bool:
   db = mysql.connect(**db_config)
@@ -69,7 +71,7 @@ def check_user_password(username:str, password:str) -> bool:
 
 
 def get_user_by_username(username: str) -> dict | None:
-    query = "SELECT first_name, last_name, username FROM users WHERE username = %s"
+    query = "SELECT id, first_name, last_name, username FROM users WHERE username = %s"
 
     connection = mysql.connect(**db_config)
     cursor = connection.cursor(dictionary=True)
@@ -82,3 +84,54 @@ def get_user_by_username(username: str) -> dict | None:
 
     return user
 
+ 
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+# CREATE query to insert sensor data
+def insert_sensor_data(user_id:int = 2, location:str = "Default Location", temperature:float = 0.0, humidity:float = 0.0) -> int:
+  db = mysql.connect(**db_config)
+  cursor = db.cursor()
+  query = "insert into sensor_data (user_id, location, temperature, humidity) values (%s, %s, %s, %s)"
+  values = (user_id, location, temperature, humidity)
+  cursor.execute(query, values)
+  db.commit()
+  db.close()
+  return cursor.lastrowid
+
+# SELECT query to get sensor data
+def get_sensor_data(user_id:int=None, location:str=None, start_time:str=None, end_time:str=None, sensor_type:str='temperature') -> list:
+  db = mysql.connect(**db_config)
+  cursor = db.cursor(dictionary=True)
+
+  field = 'temperature' if sensor_type == 'temperature' else 'humidity'
+  unit = 'Temperature (°F)' if field == 'temperature' else 'Humidity (%)'
+
+  conditions = []
+  values = []
+
+  if user_id is not None:
+    conditions.append('user_id = %s')
+    values.append(user_id)
+  if location is not None:
+    conditions.append('location = %s')
+    values.append(location)
+  if start_time is not None and end_time is not None:
+    conditions.append('created_at BETWEEN %s AND %s')
+    values.append(start_time.replace('T', ' ').replace('Z', ''))
+    values.append(end_time.replace('T', ' ').replace('Z', ''))
+
+  query = f"SELECT id, user_id, location, created_at AS time, {field} AS value FROM sensor_data"
+  if conditions:
+    query += ' WHERE ' + ' AND '.join(conditions)
+
+  cursor.execute(query, tuple(values))
+  result = cursor.fetchall()
+  db.close()
+
+  for row in result:
+    if isinstance(row['time'], datetime):
+      row['time'] = row['time'].strftime('%Y-%m-%dT%H:%M:%SZ')
+    else:
+      row['time'] = str(row['time'])
+    row['unit'] = unit
+
+  return result

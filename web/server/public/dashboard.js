@@ -1,5 +1,3 @@
-var scatterChart = null;
-
 document.addEventListener("DOMContentLoaded", () => {
 
     //''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -36,112 +34,154 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Create graph
 
-    // Get form to get form data
-    const form = document.querySelectorAll("form");
+    const formElement = document.querySelector('#data-form');
+    const endTimeInput = document.querySelector('#end-time');
+    let tempChart = null;
+    let humidChart = null;
 
-    // Event listener for form submission
-    form[0].addEventListener("submit", (event) => {
-        event.preventDefault();
-        // Get data from the form and send it to the server
-        const data = Object.fromEntries(new FormData(form[0]).entries());
-        var location = data['location'];
-        var sensorType = data['sensor-type'];
-        var endTime = data['end-time'];
-        var startTime = data['start-time'];
+    if (endTimeInput) {
+        const nowLocal = new Date();
+        endTimeInput.value = nowLocal.toISOString().slice(0, 16);
+    }
 
-        // Get data from the menu item from the form and get its cost
-        fetch(`https://ece140.frosty-sky-f43d.workers.dev/api/query?auth=A16359906&sensorType=${sensorType}`)
-        .then((response) => {
-            if (!response.ok) {
-                throw new Error(`HTTP Error: ${response.status}`);
-            }
-            return response.json();
-            })
-        .then((data) => {
-            // Filter data by location
-            var locationdata = data['results'].filter(function(dataPoint) {
-                return dataPoint.location == location;
-            });
-            // Filter data by start time
-            var begindata = locationdata.filter(function(dataPoint) {
-                return dataPoint.time > startTime;
-            });
+    function fetchSensorData(userId, location, startTimeUtc, endTimeUtc, sensorType) {
+        const url = `/api/sensor-data?user_id=${userId}&location=${encodeURIComponent(location)}&start_time=${encodeURIComponent(startTimeUtc)}&end_time=${encodeURIComponent(endTimeUtc)}&sensor_type=${encodeURIComponent(sensorType)}`;
+        return fetch(url)
+          .then((response) => {
+              if (!response.ok) {
+                  throw new Error(`HTTP Error: ${response.status}`);
+              }
+              return response.json();
+          })
+          .then((responseData) => {
+              return (responseData['results'] || []).map((dataPoint) => {
+                  return Object.assign({}, dataPoint, {
+                      time: new Date(dataPoint.time)
+                  });
+              });
+          });
+    }
 
-            // Filter data by end time
-            var enddata = begindata.filter(function(dataPoint) {
-                return dataPoint.time < endTime;
-            });
+    function buildLineChart(ctx, label, chartData, yAxisLabel, color) {
+        if (ctx.chartInstance) {
+            ctx.chartInstance.destroy();
+        }
 
-            // Array to store extracted values
-            var chartValues = [];
-            var chartTimes = [];
-
-            // Iterate through the properties of the object
-            for (var entry in enddata) {
-                for (var key in enddata[entry]) {
-                    // Extract values
-                    if (key === "value") {
-                        // Push the value into the extracted values array
-                        chartValues.push(enddata[entry][key]);
-                    }
-                    // Extract times
-                    if (key === "time") {
-                        // Push the value into the extracted values array
-                        // chartTimes.push(new Date(enddata[entry][key]));
-                        chartTimes.push(enddata[entry][key]);
-                    }
-                }
-            }
-
-            // // Get the canvas element
-            var ctx = document.getElementById('myChart').getContext('2d');
-
-            // Check if the chart instance exists
-            if (typeof scatterChart !== 'undefined' && scatterChart !== null) {
-                // If it exists, destroy the chart
-                scatterChart.destroy();
-            }
-
-            // Combine time and value data into an array of objects
-            var scatterData = [];
-            for (var i = 0; i < chartTimes.length; i++) {
-                scatterData.push({ x: chartTimes[i], y: chartValues[i] });
-            }
-            
-            // Create the scatter plot
-            scatterChart = new Chart(ctx, {
-                type: 'scatter',
-                data: {
-                    datasets: [{
-                        label: 'Requested Data',
-                        data: scatterData,
-                        backgroundColor: 'rgba(255, 99, 132, 0.5)' // Color of the data points
-                    }]
+        ctx.chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: label,
+                    data: chartData,
+                    borderColor: color,
+                    backgroundColor: color,
+                    fill: false,
+                    tension: 0.25,
+                    pointRadius: 4,
+                    pointHoverRadius: 8,
+                    pointHitRadius: 10,
+                    hoverRadius: 8
+                }]
+            },
+            options: {
+                interaction: {
+                    mode: 'nearest',
+                    intersect: true
                 },
-                options: {
-                    scales: {
-                        x: {
-                            type: 'time', // Use time scale for x-axis
-                            time: {
-                                displayFormats: {
-                                    hour: 'MMM D, h:mm a' // Format for displaying hours and minutes
-                                }
-                            },
-                            title: {
-                                display: true,
-                                text: 'Time' // X-axis label
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: enddata[0]['unit'] // Y-axis label
+                plugins: {
+                    tooltip: {
+                        enabled: true,
+                        mode: 'nearest',
+                        intersect: true,
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.parsed.y;
+                                const time = context.parsed.x ? new Date(context.parsed.x).toLocaleString() : '';
+                                return `${context.dataset.label}: ${value} at ${time}`;
                             }
                         }
                     }
+                },
+                onClick: (event, elements, chart) => {
+                    if (elements.length > 0) {
+                        const element = elements[0];
+                        const dataset = chart.data.datasets[element.datasetIndex];
+                        const pointData = dataset.data[element.index];
+                        const pointTime = pointData.x ? new Date(pointData.x).toLocaleString() : '';
+                        const pointValue = pointData.y;
+                        alert(`${dataset.label}: ${pointValue} at ${pointTime}`);
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'minute',
+                            displayFormats: {
+                                second: 'h:mm a',
+                                minute: 'h:mm a',
+                                hour: 'h:mm a',
+                                day: 'MMM D',
+                                month: 'MMM YYYY'
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        },
+                        ticks: {
+                            autoSkip: true,
+                            maxTicksLimit: 10
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: yAxisLabel
+                        }
+                    }
                 }
-            });
+            }
+        });
 
+        return ctx.chartInstance;
+    }
+
+    // Event listener for form submission
+    formElement.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const data = Object.fromEntries(new FormData(formElement).entries());
+        const location = data['location'];
+        const startTime = data['start-time'];
+        const endTime = data['end-time'];
+        const userId = data['user-id'];
+
+        if (!startTime || !endTime) {
+            alert('Please select both start and end times.');
+            return;
+        }
+
+        const startTimeUtc = new Date(startTime).toISOString();
+        const endTimeUtc = new Date(endTime).toISOString();
+
+        Promise.all([
+            fetchSensorData(userId, location, startTimeUtc, endTimeUtc, 'temperature'),
+            fetchSensorData(userId, location, startTimeUtc, endTimeUtc, 'humidity')
+        ])
+        .then(([tempResults, humidResults]) => {
+            if (!tempResults.length && !humidResults.length) {
+                alert('No temperature or humidity data found for the selected range.');
+                return;
+            }
+
+            const tempData = tempResults.map((dataPoint) => ({ x: dataPoint.time, y: dataPoint.value }));
+            const humidData = humidResults.map((dataPoint) => ({ x: dataPoint.time, y: dataPoint.value }));
+
+            const tempCtx = document.getElementById('tempChart').getContext('2d');
+            const humidCtx = document.getElementById('humidChart').getContext('2d');
+
+            tempChart = buildLineChart(tempCtx, 'Temperature', tempData, tempResults[0]?.unit || 'Temperature', 'rgb(255, 99, 132)');
+            humidChart = buildLineChart(humidCtx, 'Humidity', humidData, humidResults[0]?.unit || 'Humidity', 'rgb(54, 162, 235)');
         })
         .catch((error) => {
             console.error(error);

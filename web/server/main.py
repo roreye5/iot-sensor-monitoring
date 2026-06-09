@@ -37,6 +37,12 @@ class Visitor(BaseModel):
   username: str
   password: str
 
+class SensorData(BaseModel):
+  user_id: int
+  location: str
+  temperature: float
+  humidity: float
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 # A function to authenticate users when trying to login or use protected routes
 # returns the user data
@@ -133,7 +139,12 @@ def post_login(visitor:Visitor, request:Request, response:Response) -> dict:
   # Authenticate the user
   user = authenticate_user(username, password)
   if user:
-    session_data = {'username': username, "first_name": user["first_name"], 'logged_in': True}
+    session_data = {
+      'username': username,
+      'first_name': user['first_name'],
+      'user_id': user['id'],
+      'logged_in': True
+    }
     session_id = sessions.create_session(response, session_data)
     return {'message': 'Login successful', 'session_id': session_id}
   else:
@@ -155,7 +166,11 @@ def get_dashboard(request:Request) -> HTMLResponse:
       return views.TemplateResponse(
         request,
         "dashboard.html",
-        context = {"request": request, "username": str(session.get('first_name')).capitalize()}
+        context = {
+          "request": request,
+          "username": str(session.get('first_name')).capitalize(),
+          "user_id": session.get('user_id')
+        }
       )
     else:
       return RedirectResponse(url="/login", status_code=302)
@@ -179,8 +194,34 @@ def get_home(request:Request) -> HTMLResponse:
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+# POST route to send & store sensor data to database
+@app.post('/api/sensor-data')
+def post_sensor_data(data: SensorData) -> dict:
+   new_id = db.insert_sensor_data(data.user_id, data.location, data.temperature, data.humidity)
+   return {"message": "Sensor data inserted successfully", "data_id": new_id}
+
+
+
+
+
+
+
+
+# GET route to fetch sensor data from 
+@app.get('/api/sensor-data')
+def get_sensor_data(user_id:int, location:str, start_time:str, end_time:str, sensor_type:str = 'temperature') -> dict:
+  data = db.get_sensor_data(user_id, location, start_time, end_time, sensor_type)
+  return {'results': data}   
+
+
+
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 
 
 # If running the server directly from Python as a module
 if __name__ == "__main__":
-  uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+  uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+
+  # uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
