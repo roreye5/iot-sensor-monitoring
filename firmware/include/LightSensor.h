@@ -36,6 +36,13 @@ public:
     return _calculateLux(_average); // Calculate lux based on the filtered _average
   }
 
+  float getLightPercentage(){
+    int rawValue = analogRead(_sensorPin);
+    
+    float percentage = 100.0 - ((rawValue / 4095.0) * 100.0); // Invert and convert to percentage
+    return percentage;
+  }
+
 
 private:
   static constexpr int _sampleSize = 10; // Size of the moving _average filter

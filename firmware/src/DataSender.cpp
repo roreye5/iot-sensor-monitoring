@@ -1,7 +1,8 @@
 #include "DataSender.h"
 
-DataSender::DataSender(String userId, String location, String serverUrl)
-: _userId(userId), _location(location), _serverUrl(serverUrl) {
+DataSender::DataSender(String userId, String location, String serverUrl, int ledPin)
+: _userId(userId), _location(location), _serverUrl(serverUrl), _ledPin(ledPin) {
+    pinMode(_ledPin, OUTPUT);
     Serial.println("[DataSender] Initialized with user ID, location, and server URL");
 }
 
@@ -12,6 +13,7 @@ void DataSender::connectToWiFi(String ssid, String password) {
     delay(1000);
     Serial.print(".");
   }
+  digitalWrite(_ledPin, HIGH); // Turn on the built-in LED to indicate successful WiFi connection
   Serial.println("\n[WiFi] Connected to WiFi.");
 }
 
@@ -45,30 +47,29 @@ void DataSender::connectToWPAEnterprise(String ssid, String username, String pas
   dns_setserver(0, &dnsserver);
 }
 
-void DataSender::sendData(String sensorType, String sensorName, float value, String unit) {
+bool DataSender::sendData(float temperature, float humidity) {
   Serial.println("[DataSender] Preparing to send data...");
   // Store the last data entry
-  _lastData = "{ \"auth\": \"" + _userId +
-                        "\", \"location\": \"" + _location +
-                        "\", \"sensorType\": \"" + sensorType +
-                        "\", \"sensorName\": \"" + sensorName +
-                        "\", \"value\": " + String(value, 2) +
-                        ", \"unit\": \"" + unit + "\" }";
-  _readyToSend = true; // Mark as ready to send
-  Serial.println("[DataSender] Data stored and marked as ready to send.");
+  _lastData = "{ \"user_id\": " + _userId +
+              ", \"location\": \"" + _location +
+              "\", \"temperature\": " + String(temperature, 2) +
+              ", \"humidity\": " + String(humidity, 2) + " }";
+  Serial.println("[DataSender] Data stored.");
 
-  if (_checkRateLimit() && _readyToSend) {
+  if (_checkRateLimit()) {
     Serial.println("[DataSender] Rate limit check passed, attempting to send data...");
-    _performSend();
+    return _performSend();
   } else {
-    Serial.println("[DataSender] Rate limit not passed or not ready to send.");
+    Serial.println("[DataSender] Rate limit not passed, send skipped.");
+    return false; // Data not sent due to rate limit
   }
 }
 
 bool DataSender::_checkRateLimit() {
   unsigned long currentTime = millis();
+  const unsigned long minSendInterval = 120000; // 2 minutes
 
-  if (currentTime - _lastSendTime < 60000) { // Less than a minute
+  if (currentTime - _lastSendTime < minSendInterval) {
     Serial.println("[DataSender] Rate limit in effect, waiting...");
     return false; // Don't send data, rate limit in effect
   }
@@ -77,16 +78,11 @@ bool DataSender::_checkRateLimit() {
   return true;
 }
 
-void DataSender::_performSend() {
-  if (!_readyToSend) {
-    Serial.println("[DataSender] No data ready to send.");
-    return; // Nothing to send if not ready
-  }
-
+bool DataSender::_performSend() {
   // Check if server URL is valid
   if (_serverUrl.length() == 0) {
     Serial.println("[DataSender] Server URL is empty.");
-    return;
+    return false;
   }
 
   HTTPClient http;
@@ -101,10 +97,14 @@ void DataSender::_performSend() {
   if (httpResponseCode > 0) {
     String response = http.getString();
     Serial.println("[DataSender] Data sent successfully, server response: " + response);
+    http.end(); //Close connection
+    digitalWrite(_ledPin, HIGH); // Turn on the built-in LED to indicate successful data send
+    return true; // Data sent successfully
   } else {
     Serial.println("[DataSender] Error on sending POST: " + String(httpResponseCode));
+    http.end(); //Close connection
+    digitalWrite(_ledPin, LOW); // Turn off the built-in LED to indicate failed data send
+    return false; // Failed to send data
   }
 
-  http.end(); //Close connection
-  _readyToSend = false; // Reset ready to send flag after sending
 }

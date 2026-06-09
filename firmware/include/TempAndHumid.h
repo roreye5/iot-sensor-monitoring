@@ -42,10 +42,10 @@ public:
     
     /**
      * @brief Gets the temperature reading from the sensor.
-     * @return The temperature in degrees Celsius.
+     * @return The temperature in degrees Fahrenheit.
      */
     float getTemp() {
-        return dht->readTemperature();
+        return dht->readTemperature(true); // Read temperature in Fahrenheit
     }
 
     /**

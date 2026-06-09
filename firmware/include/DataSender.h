@@ -28,7 +28,7 @@ public:
    * @param location The location of the ESP32
    * @param serverUrl The URL of the server to send data to
    */
-  DataSender(String userId, String location, String serverUrl);
+  DataSender(String userId, String location, String serverUrl, int ledPin);
 
   /**
    * @brief Connect to a regular WiFi network
@@ -55,7 +55,7 @@ public:
    * @param value The value of the sensor reading
    * @param unit The unit of the sensor reading (e.g. degrees Celsius, hPa, lux, etc.)
    */
-  void sendData(String sensorType, String sensorName, float value, String unit);
+  bool sendData(float temperature, float humidity);
 
 private:
   String _userId;
@@ -63,11 +63,12 @@ private:
   String _serverUrl;
   String _lastData;
 
-  unsigned long _lastSendTime = 60001; // Initialize to ensure the first send is allowed
-  
-  bool _readyToSend = false;
+  unsigned long _lastSendTime = 0; // Initialize to ensure the first send is allowed
+
   bool _checkRateLimit();
-  void _performSend();
+  bool _performSend();
+  int _ledPin; // Pin for the built-in LED to indicate sending status
+
 };
 
 #endif
