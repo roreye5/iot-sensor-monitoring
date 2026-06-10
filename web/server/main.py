@@ -11,7 +11,7 @@ from fastapi.templating import Jinja2Templates    # Used for generating HTML fro
 from fastapi.staticfiles import StaticFiles       # Used for making static resources available to server
 from pathlib import Path
 import uvicorn                                    # Used for running the app directly through Python
-import dbutils as db                              # Import helper module of database functions!
+from server import dbutils as db                              # Import helper module of database functions!
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 # Configuration
@@ -22,7 +22,7 @@ static_files = StaticFiles(directory=BASE_DIR / "public")    # Specify where the
 app.mount('/public', static_files, name='public') # Mount the static files directory to /public
 
 # Use MySQL for storing session data
-from sessiondb import Sessions
+from server.sessiondb import Sessions
 sessions = Sessions(db.db_config, expiry=600)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
