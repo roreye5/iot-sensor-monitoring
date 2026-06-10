@@ -17,6 +17,9 @@ from server import dbutils as db                              # Import helper mo
 # Configuration
 BASE_DIR = Path(__file__).resolve().parent
 app = FastAPI()                                   # Specify the "app" that will run the routing
+@app.on_event("startup")
+def startup_event():
+    db.initialize_database()
 views = Jinja2Templates(directory=BASE_DIR / "views")        # Specify where the HTML files are located
 static_files = StaticFiles(directory=BASE_DIR / "public")    # Specify where the static files are located
 app.mount('/public', static_files, name='public') # Mount the static files directory to /public

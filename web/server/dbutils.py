@@ -4,7 +4,10 @@ import mysql.connector as mysql                   # Used for interacting with th
 import os                                         # Used for interacting with the system environment
 from dotenv import load_dotenv                    # Used to read the credentials
 import bcrypt
+from pathlib import Path
 
+BASE_DIR = Path(__file__).resolve().parent
+SQL_INIT_FILE = BASE_DIR.parent / "database" / "init-db.sql"
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 # Configuration
 load_dotenv('../credentials.env')                 # Read in the environment variables for MySQL
@@ -15,6 +18,22 @@ db_config = {
   "database": os.environ['MYSQL_DATABASE']
 }
 
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+def initialize_database() -> None:
+  db = mysql.connect(**db_config)
+  cursor = db.cursor()
+
+  with open(SQL_INIT_FILE, "r") as file:
+    sql_script = file.read()
+
+  for statement in sql_script.split(";"):
+    statement = statement.strip()
+    if statement:
+      cursor.execute(statement)
+
+  db.commit()
+  cursor.close()
+  db.close()
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 # Define helper functions for CRUD operations
 # CREATE SQL query

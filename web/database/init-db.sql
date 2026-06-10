@@ -1,7 +1,3 @@
-create database if not exists ece140;
-
-use ece140;
-
 create table if not exists users (
   id         integer auto_increment primary key,
   first_name varchar(64) not null,
