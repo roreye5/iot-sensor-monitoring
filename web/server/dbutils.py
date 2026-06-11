@@ -6,7 +6,10 @@ from pathlib import Path                             # Used for handling file pa
 from dotenv import load_dotenv                    # Used to read the credentials
 from datetime import datetime
 import bcrypt
+from pathlib import Path
 
+BASE_DIR = Path(__file__).resolve().parent
+SQL_INIT_FILE = BASE_DIR.parent / "database" / "init-db.sql"
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 # Configuration
 BASE_DIR = Path(__file__).resolve().parent
@@ -18,6 +21,22 @@ db_config = {
   "database": os.environ['MYSQL_DATABASE']
 }
 
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+def initialize_database() -> None:
+  db = mysql.connect(**db_config)
+  cursor = db.cursor()
+
+  with open(SQL_INIT_FILE, "r") as file:
+    sql_script = file.read()
+
+  for statement in sql_script.split(";"):
+    statement = statement.strip()
+    if statement:
+      cursor.execute(statement)
+
+  db.commit()
+  cursor.close()
+  db.close()
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 # Define helper functions for CRUD operations
 # CREATE SQL query
